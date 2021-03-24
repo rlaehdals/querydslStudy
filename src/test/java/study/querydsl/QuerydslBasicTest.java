@@ -2,6 +2,7 @@ package study.querydsl;
 
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
+import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.JPAExpressions;
@@ -12,6 +13,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
+import study.querydsl.dto.MemberDto;
+import study.querydsl.dto.QMemberDto;
+import study.querydsl.dto.UserDto;
 import study.querydsl.entity.*;
 
 import javax.persistence.EntityManager;
@@ -19,6 +23,7 @@ import javax.persistence.EntityManagerFactory;
 import javax.persistence.PersistenceUnit;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.querydsl.jpa.JPAExpressions.*;
 import static org.assertj.core.api.Assertions.*;
@@ -240,7 +245,7 @@ public class QuerydslBasicTest {
     @PersistenceUnit
     EntityManagerFactory emf;
     @Test
-    void fetchJoinNo(){
+    void fetchJoin(){
         em.flush();
         em.clear();
         Member findMember = query
@@ -348,5 +353,82 @@ public class QuerydslBasicTest {
                 .from(member)
                 .where(member.username.eq("member1"))
                 .fetch();
+    }
+    @Test
+    void simpleProjection(){
+        List<String> result = query.select(member.username)
+                .from(member)
+                .fetch();
+    }
+    @Test
+    void tupleProjection(){
+        List<Tuple> result = query
+                .select(member.username, member.age)
+                .from(member)
+                .fetch();
+    }
+    @Test
+    void findDtoJPQL(){
+        List<Member> result = em.createQuery("select m from Member m", Member.class)
+                .getResultList();
+        List<MemberDto> dto = result.stream()
+                .map(o -> new MemberDto(o.getUsername(), o.getAge()))
+                .collect(Collectors.toList());
+    }
+    @Test
+    void findDtoBySetter(){
+        List<MemberDto> result = query
+                .select(Projections.bean(MemberDto.class,
+                        member.username,
+                        member.age))
+                .from(member)
+                .fetch();
+    }
+    @Test
+    void findDtoByField(){
+        List<MemberDto> result = query
+                .select(Projections.fields(MemberDto.class,
+                        member.username,
+                        member.age))
+                .from(member)
+                .fetch();
+    }
+    @Test
+    void findDtoByConstructor(){
+        List<MemberDto> result = query
+                .select(Projections.constructor(MemberDto.class,
+                        member.username,
+                        member.age))
+                .from(member)
+                .fetch();
+    }
+    @Test
+    void findUserDtd(){
+        QMember memberSub = new QMember("memberSub");
+        List<UserDto> result = query
+                .select(Projections.fields(UserDto.class,
+                        member.username.as("name"),//이 방법 추천
+                        Expressions.as(JPAExpressions.
+                                select(memberSub.age.max())
+                        .from(memberSub),"age")))
+                .from(member)
+                .fetch();
+    }
+    @Test
+    void findUserDtoByConstructor(){
+        List<UserDto> result = query
+                .select(Projections.constructor(UserDto.class,
+                        member.username,//생성자는 변수명이 달라도 괜찮다. 단 setter과 field는 필요하다
+                        member.age))
+                .from(member)
+                .fetch();
+    }
+    @Test
+    void findDtoByQueryProjection(){
+        List<MemberDto> result = query
+                .select(new QMemberDto(member.username, member.age))
+                .from(member)
+                .fetch();
+
     }
 }
