@@ -1,8 +1,11 @@
 package study.querydsl;
 
+import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
+import com.querydsl.core.types.Predicate;
 import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.JPAExpressions;
@@ -409,7 +412,7 @@ public class QuerydslBasicTest {
                 .select(Projections.fields(UserDto.class,
                         member.username.as("name"),//이 방법 추천
                         Expressions.as(JPAExpressions.
-                                select(memberSub.age.max())
+                                select(memberSub.age.max())//이 방법 별로
                         .from(memberSub),"age")))
                 .from(member)
                 .fetch();
@@ -429,6 +432,124 @@ public class QuerydslBasicTest {
                 .select(new QMemberDto(member.username, member.age))
                 .from(member)
                 .fetch();
+    }
+    @Test
+    void dynamicQuery_BooleanBuilder(){
+        String usernameParam= "member1";
+        Integer ageParam= 10;
+//        Integer ageParam= 10;
+
+
+        List<Member> result = searchMember1(usernameParam, ageParam);
+        assertThat(result.size()).isEqualTo(1);
+    }
+
+    private List<Member> searchMember1(String usernameCond, Integer ageCond) {
+        BooleanBuilder builder = new BooleanBuilder(member.username.eq(usernameCond));
+        if(usernameCond !=null){
+            builder.and(member.username.eq(usernameCond));
+        }
+        if(ageCond!=null){
+            builder.and(member.age.eq(ageCond));
+        }
+
+
+        return query
+                .selectFrom(member)
+                .where(builder)
+                .fetch();
+    }
+    @Test
+    void dynamicQuery_WhereParam(){
+        String usernameParam= "member1";
+        Integer ageParam= 10;
+//        Integer ageParam= 10;
+
+
+        List<Member> result = searchMember2(usernameParam, ageParam);
+        assertThat(result.size()).isEqualTo(1);
 
     }
+
+    private List<Member> searchMember2(String usernameCond, Integer ageCond) {
+
+        return query
+                .selectFrom(member)
+                //.where(usernameEq(usernameCond), ageEq(ageCond))
+                .where(allEq(usernameCond,ageCond))
+                .fetch();
+
+    }
+
+    private BooleanExpression usernameEq(String usernameCond) {
+        if (usernameCond == null) {
+            return null;
+        }
+        else {
+            return member.username.eq(usernameCond);
+        }
+    }
+    private BooleanExpression ageEq(Integer ageCond) {
+        if(ageCond!=null){
+            return member.age.eq(ageCond);
+        }
+        else{
+            return null;
+        }
+    }
+
+    //광고상태 isValid 날짜가 IN: canService
+    private BooleanExpression allEq(String usernameCond, Integer ageCond){
+        return usernameEq(usernameCond).and(ageEq(ageCond));
+    }
+    @Test
+    void bulkUpdate(){
+        //member1 = 10 -> 비회원
+        //member2 = 20 -> 비회원
+        //member3 = 30 -> 유지
+        //member4 = 40 -> 유지
+
+        long count = query
+                .update(member)
+                .set(member.username, "비회원")
+                .where(member.age.lt(28))
+                .execute();
+        em.flush();
+        em.clear();
+    }
+    @Test
+    void bulkAdd(){
+        long count = query
+                .update(member)
+                .set(member.age, member.age.add(1))
+                .execute();
+    }
+    @Test
+    void bulkDelete(){
+        query
+                .delete(member)
+                .where(member.age.gt(18))
+                .execute();
+    }
+    @Test
+    void sqlFunction(){
+        List<String> result = query
+                .select(Expressions.stringTemplate(
+                        "function('replace',{0},{1},{2})"
+                        , member.username, "member", "M"))
+                .from(member)
+                .fetch();
+    }
+    @Test
+    void wqlFunction2(){
+        List<String> result = query
+                .select(member.username)
+                .from(member)
+                //.where(member.username.eq(
+                        //Expressions.stringTemplate(
+                         //       "function('lower', {0})", member.username)))
+                .where(member.username.eq(member.username.lower()))
+                .fetch();
+    }
+
 }
