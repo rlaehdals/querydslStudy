@@ -16,7 +16,7 @@
 
 def querydslDir = "$buildDir/generated/querydsl"
 
-querydsl{
+```querydsl{
   jpa=true
   querydslSourceDir = queryDir
 }
@@ -30,6 +30,7 @@ configurations{
 compileQuerydsl{
   options.annotationProcessorPayh = configurations.querydsl
 }
+```
 > gradle -> tasks -> other -> javaCompile을 실행하여 Q클래스가 생기는지 확인한다.
 
 1. querydsl 기본 사용법
