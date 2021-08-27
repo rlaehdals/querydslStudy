@@ -16,7 +16,8 @@
 
 def querydslDir = "$buildDir/generated/querydsl"
 
-```querydsl{
+```
+querydsl{
   jpa=true
   querydslSourceDir = queryDir
 }
