@@ -14,9 +14,10 @@
 
 ## query설정
 
+```
 def querydslDir = "$buildDir/generated/querydsl"
 
-```
+
 querydsl{
   jpa=true
   querydslSourceDir = queryDir
